@@ -19,8 +19,6 @@ OUTPUT_DIR="$BUILDER_ROOT/output"
 KERNEL_DIR="$BUILD_ROOT/kernel"
 ZFS_DIR="$BUILD_ROOT/zfs"
 MODULES_DIR="$BUILD_ROOT/modules"
-HEADERS_DIR="$BUILD_ROOT/headers"
-PERF_DIR="$BUILD_ROOT/perf"
 
 case "$BUILD_ROOT" in
     ""|/|"$BUILDER_ROOT")
@@ -32,16 +30,15 @@ esac
 rm -rf -- "$BUILD_ROOT" "$OUTPUT_DIR"
 mkdir -p "$BUILD_ROOT" "$OUTPUT_DIR"
 
-echo ">>> [1/7] Installing build dependencies..."
+echo ">>> [1/6] Installing build dependencies..."
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update
 sudo apt-get install -y \
     autoconf automake bc binutils bison build-essential cpio curl dwarves \
-    e2fsprogs flex gawk git libaio-dev libattr1-dev libblkid-dev libcap-dev \
-    libdw-dev libelf-dev libffi-dev liblzma-dev libnuma-dev libslang2-dev \
-    libssl-dev libtirpc-dev libtool libudev-dev libunwind-dev libzstd-dev \
-    python3 python3-cffi python3-dev python3-setuptools qemu-utils rsync \
-    uuid-dev zlib1g-dev
+    e2fsprogs flex gawk git libaio-dev libattr1-dev libblkid-dev libelf-dev \
+    libffi-dev libssl-dev libtirpc-dev libtool libudev-dev python3 \
+    python3-cffi python3-dev python3-setuptools qemu-utils rsync uuid-dev \
+    zlib1g-dev
 
 fetch_pinned_source() {
     local repository=$1
@@ -65,10 +62,10 @@ fetch_pinned_source() {
     fi
 }
 
-echo ">>> [2/7] Fetching pinned WSL kernel..."
+echo ">>> [2/6] Fetching pinned WSL kernel..."
 fetch_pinned_source "$WSL_REPOSITORY" "$WSL_REF" "$WSL_COMMIT" "$KERNEL_DIR"
 
-echo ">>> [3/7] Preparing kernel and pinned OpenZFS..."
+echo ">>> [3/6] Preparing kernel and pinned OpenZFS..."
 export KCONFIG_CONFIG="$KERNEL_DIR/Microsoft/config-wsl"
 # An explicitly set empty LOCALVERSION suppresses the SCM '+' suffix.
 export LOCALVERSION=""
@@ -102,28 +99,18 @@ elif [[ "$BUILD_JOBS" -gt 2 ]]; then
     BUILD_JOBS=$((BUILD_JOBS / 2))
 fi
 
-echo ">>> [4/7] Building kernel and modules with $BUILD_JOBS jobs..."
+echo ">>> [4/6] Building kernel and modules with $BUILD_JOBS jobs..."
 make -C "$KERNEL_DIR" -j"$BUILD_JOBS"
 make -C "$KERNEL_DIR" -j"$BUILD_JOBS" \
     INSTALL_MOD_PATH="$MODULES_DIR" modules_install
 
-echo ">>> [5/7] Building UAPI headers and perf..."
-make -C "$KERNEL_DIR" headers_install INSTALL_HDR_PATH="$HEADERS_DIR"
-make -C "$KERNEL_DIR/tools/perf" -j"$BUILD_JOBS" \
-    NO_JEVENTS=1 \
-    NO_JVMTI=1 \
-    NO_LIBTRACEEVENT=1 \
-    install DESTDIR="$PERF_DIR" prefix=/
-
 KERNEL_RELEASE=$(make -s -C "$KERNEL_DIR" kernelrelease)
 KERNEL_VERSION=$(make -s -C "$KERNEL_DIR" kernelversion)
 
-echo ">>> [6/7] Packaging WSL artifacts..."
+echo ">>> [5/6] Packaging WSL kernel modules..."
 install -m 0644 "$KERNEL_DIR/arch/x86/boot/bzImage" "$OUTPUT_DIR/bzImage"
-"$KERNEL_DIR/Microsoft/scripts/gen_artifacts_vhdx.sh" \
+sudo "$BUILDER_ROOT/scripts/gen_modules_vhdx.sh" \
     "$MODULES_DIR" \
-    "$HEADERS_DIR" \
-    "$PERF_DIR" \
     "$KERNEL_RELEASE" \
     "$OUTPUT_DIR/modules.vhdx"
 
@@ -138,7 +125,7 @@ KERNEL_VERSION=$KERNEL_VERSION
 KERNEL_RELEASE=$KERNEL_RELEASE
 EOF
 
-echo ">>> [7/7] Build complete: $OUTPUT_DIR"
+echo ">>> [6/6] Build complete: $OUTPUT_DIR"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     {
         echo "kernel_release=$KERNEL_RELEASE"

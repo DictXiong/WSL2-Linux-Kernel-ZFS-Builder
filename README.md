@@ -26,8 +26,13 @@ a release.
 Build outputs:
 
 - `bzImage`
-- `modules.vhdx`, containing modules, UAPI headers, and perf
+- `modules.vhdx`, with the module tree directly at the filesystem root
 - `build-manifest.txt`, recording the exact source commits and kernel release
+
+The VHDX layout is intentionally compatible with WSL's `kernelModules` setting:
+its root contains `kernel/`, `modules.dep`, `modules.alias`, and the other module
+metadata files. It does not use the newer
+`<kernel-release>/modules` artifacts-bundle layout.
 
 ## Local build
 
