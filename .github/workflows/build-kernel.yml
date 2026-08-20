@@ -49,7 +49,7 @@ jobs:
           output/bzImage
           output/modules.vhdx
           output/build-manifest.txt
-        compression-level: 0
+        compression-level: 9
         retention-days: 14
 
     - name: Publish release
@@ -58,8 +58,21 @@ jobs:
       with:
         tag_name: ${{ steps.build.outputs.release_tag }}
         name: WSL ${{ steps.build.outputs.kernel_version }} + ${{ steps.build.outputs.zfs_ref }}
-        body_path: output/build-manifest.txt
+        body: |
+          ## WSL2 kernel with OpenZFS
+
+          - **Kernel release:** `${{ steps.build.outputs.kernel_release }}`
+          - **WSL kernel source:** [`${{ steps.build.outputs.wsl_ref }}`](https://github.com/microsoft/WSL2-Linux-Kernel/commit/${{ steps.build.outputs.wsl_commit }})
+          - **OpenZFS source:** [`${{ steps.build.outputs.zfs_ref }}`](https://github.com/openzfs/zfs/releases/tag/${{ steps.build.outputs.zfs_ref }}) ([commit](https://github.com/openzfs/zfs/commit/${{ steps.build.outputs.zfs_commit }}))
+
+          ### Files
+
+          - `bzImage` — custom WSL2 kernel; use it as the `.wslconfig` `kernel` file.
+          - `modules.vhdx.zip` — compressed kernel modules disk; extract it before using the resulting `modules.vhdx` as the `.wslconfig` `kernelModules` file.
+          - `build-manifest.txt` — exact source revisions used for this build.
+
+          Built automatically by [GitHub Actions](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
         files: |
           output/bzImage
-          output/modules.vhdx
+          output/modules.vhdx.zip
           output/build-manifest.txt

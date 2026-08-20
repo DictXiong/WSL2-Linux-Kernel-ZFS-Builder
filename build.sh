@@ -38,7 +38,7 @@ sudo apt-get install -y \
     e2fsprogs flex gawk git libaio-dev libattr1-dev libblkid-dev libelf-dev \
     libffi-dev libssl-dev libtirpc-dev libtool libudev-dev python3 \
     python3-cffi python3-dev python3-setuptools qemu-utils rsync uuid-dev \
-    zlib1g-dev
+    zip zlib1g-dev
 
 fetch_pinned_source() {
     local repository=$1
@@ -113,6 +113,7 @@ sudo "$BUILDER_ROOT/scripts/gen_modules_vhdx.sh" \
     "$MODULES_DIR" \
     "$KERNEL_RELEASE" \
     "$OUTPUT_DIR/modules.vhdx"
+zip -9 -j "$OUTPUT_DIR/modules.vhdx.zip" "$OUTPUT_DIR/modules.vhdx"
 
 cat > "$OUTPUT_DIR/build-manifest.txt" <<EOF
 WSL_REPOSITORY=$WSL_REPOSITORY
@@ -130,7 +131,10 @@ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     {
         echo "kernel_release=$KERNEL_RELEASE"
         echo "kernel_version=$KERNEL_VERSION"
+        echo "wsl_ref=$WSL_REF"
+        echo "wsl_commit=$WSL_COMMIT"
         echo "zfs_ref=$ZFS_REF"
+        echo "zfs_commit=$ZFS_COMMIT"
         echo "release_tag=linux-msft-wsl-$KERNEL_VERSION-$ZFS_REF"
     } >> "$GITHUB_OUTPUT"
 fi

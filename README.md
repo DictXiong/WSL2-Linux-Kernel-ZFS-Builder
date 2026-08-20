@@ -27,7 +27,12 @@ Build outputs:
 
 - `bzImage`
 - `modules.vhdx`, with the module tree directly at the filesystem root
+- `modules.vhdx.zip`, a maximum-compression archive used for GitHub releases
 - `build-manifest.txt`, recording the exact source commits and kernel release
+
+GitHub Actions stores `modules.vhdx` inside its artifact archive with compression
+level 9. GitHub releases upload the precompressed `modules.vhdx.zip` instead of
+the much larger raw VHDX; extract it before configuring WSL `kernelModules`.
 
 The VHDX layout is intentionally compatible with WSL's `kernelModules` setting:
 its root contains `kernel/`, `modules.dep`, `modules.alias`, and the other module
