@@ -1,0 +1,64 @@
+name: Build WSL2 Kernel with ZFS
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Publish the build as a GitHub release
+        required: true
+        type: boolean
+        default: true
+  push:
+    branches:
+      - main
+    paths:
+      - versions.env
+      - build.sh
+      - .github/workflows/build-kernel.yml
+
+concurrency:
+  group: wsl-zfs-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout builder
+      uses: actions/checkout@v6
+
+    - name: Reclaim runner disk space
+      run: |
+        docker system prune --all --force || true
+        sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+        df -h
+
+    - name: Build kernel
+      id: build
+      run: ./build.sh
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v6
+      with:
+        name: wsl-zfs-${{ steps.build.outputs.kernel_release }}
+        path: |
+          output/bzImage
+          output/modules.vhdx
+          output/build-manifest.txt
+        compression-level: 0
+        retention-days: 14
+
+    - name: Publish release
+      if: github.event_name == 'workflow_dispatch' && inputs.publish_release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.build.outputs.release_tag }}
+        name: WSL ${{ steps.build.outputs.kernel_version }} + ${{ steps.build.outputs.zfs_ref }}
+        body_path: output/build-manifest.txt
+        files: |
+          output/bzImage
+          output/modules.vhdx
+          output/build-manifest.txt

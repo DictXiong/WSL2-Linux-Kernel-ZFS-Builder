@@ -1,0 +1,12 @@
+.work/
+output/
+
+# Defensive ignores for interrupted or manually run builds.
+kernel/
+zfs/
+modules/
+headers/
+perf/
+*.img
+*.vhdx
+*.zip
